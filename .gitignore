@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node (baseline)
+node_modules/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+
+# OS
+.DS_Store
+
+# Terraform — scan-only, never commit state or local providers
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Scanner outputs (regenerated in CI; only fixtures/ is committed)
+*.sarif
+!fixtures/**/*.sarif
+sbom.cyclonedx.json
