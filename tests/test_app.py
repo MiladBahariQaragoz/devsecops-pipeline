@@ -15,8 +15,8 @@ from app import create_app  # noqa: E402 — import after env var is set
 
 @pytest.fixture()
 def client():
-    app = create_app()
-    app.config["TESTING"] = True
+    # Use an in-memory database so tests are fully isolated and leave no file on disk.
+    app = create_app(test_config={"DATABASE": ":memory:", "TESTING": True})
     with app.test_client() as c:
         yield c
 

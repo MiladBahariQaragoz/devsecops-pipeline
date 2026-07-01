@@ -14,8 +14,12 @@ from flask import Flask, jsonify, request
 from .db import add_item, get_items, init_db
 
 
-def create_app() -> Flask:
+def create_app(test_config: dict | None = None) -> Flask:
     app = Flask(__name__)
+
+    # Apply test overrides (DATABASE, TESTING, etc.) before init_db() is called.
+    if test_config is not None:
+        app.config.update(test_config)
 
     # Secret key MUST come from the environment — never hardcode.
     secret = os.environ.get("FLASK_SECRET_KEY")

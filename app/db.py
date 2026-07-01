@@ -3,11 +3,26 @@
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "items.db"
+_DEFAULT_DB_PATH = str(Path(__file__).parent / "items.db")
+
+
+def _db_path() -> str:
+    """Return the database path from app config (supports :memory: in tests)."""
+    from flask import current_app  # noqa: PLC0415 — intentional lazy import
+
+    return current_app.config.get("DATABASE", _DEFAULT_DB_PATH)  # type: ignore[return-value]
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    path = _db_path()
+    if path == ":memory:":
+        # Shared-cache URI so init_db() and request handlers see the same in-memory tables
+        # within the same process.  Each fresh process (new pytest session) starts clean.
+        conn = sqlite3.connect(
+            "file::memory:?cache=shared", uri=True, check_same_thread=False
+        )
+    else:
+        conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     return conn
 
