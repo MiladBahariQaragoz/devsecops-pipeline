@@ -13,7 +13,11 @@ def get_connection() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """Create the items table if it does not exist."""
+    """Create the items table if it does not exist.
+
+    Using the connection as a context manager commits on success and rolls
+    back on error, so no explicit ``commit()`` call is needed.
+    """
     with get_connection() as conn:
         conn.execute(
             """
@@ -23,7 +27,6 @@ def init_db() -> None:
             )
             """
         )
-        conn.commit()
 
 
 def get_items() -> list[dict]:
@@ -34,11 +37,13 @@ def get_items() -> list[dict]:
 
 
 def add_item(name: str) -> int:
-    """Insert an item by name. Uses a parameterized query to prevent SQLi."""
+    """Insert an item by name. Uses a parameterized query to prevent SQLi.
+
+    The ``with`` block commits on exit; ``lastrowid`` is read before exit.
+    """
     with get_connection() as conn:
         cursor = conn.execute(
             "INSERT INTO items (name) VALUES (?)",  # parameterized — NOT f-string
             (name,),
         )
-        conn.commit()
         return cursor.lastrowid

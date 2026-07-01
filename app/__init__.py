@@ -47,7 +47,10 @@ def create_app() -> Flask:
     def create_item():
         """Add an item. Expects JSON body: {"name": "..."}."""
         data = request.get_json(silent=True) or {}
-        name = str(data.get("name", "")).strip()
+        raw_name = data.get("name")
+        # Only a non-empty string is a valid name. A JSON null/number/bool must
+        # not be coerced into a truthy string (e.g. str(None) == "None").
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
         if not name:
             return jsonify({"error": "name is required"}), 400
         item_id = add_item(name)

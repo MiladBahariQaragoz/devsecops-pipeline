@@ -6,6 +6,10 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 
+# SQLite runtime artifact (created at app startup; never committed)
+app/items.db
+*.db
+
 # Node (baseline)
 node_modules/
 
