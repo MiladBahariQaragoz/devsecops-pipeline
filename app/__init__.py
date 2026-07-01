@@ -34,7 +34,13 @@ def create_app(test_config: dict | None = None) -> Flask:
     # Call the autoescape policy function to confirm it returns True for HTML templates.
     # (jinja_env.autoescape is Flask's select_jinja_autoescape callable; testing its
     # truthiness would always pass — calling it actually verifies the policy behaviour.)
-    assert app.jinja_env.autoescape("template.html")  # noqa: S101 — verifies autoescape policy
+    # Use an explicit RuntimeError rather than assert: assert statements are stripped
+    # when Python runs with -O / PYTHONOPTIMIZE, silently removing the security check.
+    if not app.jinja_env.autoescape("template.html"):
+        raise RuntimeError(
+            "Jinja2 autoescape is disabled for HTML templates. "
+            "This is a security invariant violation — do not disable autoescape."
+        )
 
     with app.app_context():
         init_db()
