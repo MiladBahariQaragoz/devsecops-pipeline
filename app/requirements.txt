@@ -1,0 +1,9 @@
+# Runtime dependencies — pinned to currently-patched versions.
+# Trivy fs scans this file in M3; keep clean of HIGH+ CVEs on main.
+#
+# To update: pip install flask==<new-version> then pip freeze > app/requirements.txt
+# (inside the .venv, not globally).
+#
+# NOTE: The demo/failing-gates branch pins flask==0.12.2 (known CVEs) to make Trivy fire.
+# Do NOT pin a vulnerable version here.
+flask>=3.0.0,<4.0.0
