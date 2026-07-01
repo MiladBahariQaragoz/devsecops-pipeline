@@ -8,10 +8,10 @@ point early. **Lab is Linux; Terraform is scan-only — no `terraform apply`, no
 
 ## Milestones
 
-- [ ] **M0 — Scaffold** — git + GitHub remote, `pyproject.toml`/repo skeleton, `CLAUDE.md`, docs
+- [x] **M0 — Scaffold** — git + GitHub remote, `pyproject.toml`/repo skeleton, `CLAUDE.md`, docs
   skeleton, `DISCLAIMER.md` (scan-only / no-spend), `.gitignore` (+ `*.tfstate*`, `.terraform/`),
   `.github/workflows/security.yml` shell. *(Linux box)*
-- [ ] **M1 — App** — fresh minimal **secure** Flask service in `app/` + `Dockerfile`
+- [x] **M1 — App** — fresh minimal **secure** Flask service in `app/` + `Dockerfile`
   (pinned `python:3.12-slim`) + smoke test; basic CI build green. *(Docker)*
 - [ ] **M2 — Policy spine** — `policy/*.rego` (severity threshold + exception/expiry logic) +
   `data/exceptions.yaml` + `opa test policy/`; `conftest` over committed `fixtures/clean/` (passes)
