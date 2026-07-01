@@ -31,8 +31,10 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.config["SECRET_KEY"] = secret
 
     # Jinja2 autoescape is ON by default in Flask for .html/.htm/.xml/.xhtml extensions.
-    # Explicitly confirm it is not disabled.
-    assert app.jinja_env.autoescape  # noqa: S101 — intentional security assertion
+    # Call the autoescape policy function to confirm it returns True for HTML templates.
+    # (jinja_env.autoescape is Flask's select_jinja_autoescape callable; testing its
+    # truthiness would always pass — calling it actually verifies the policy behaviour.)
+    assert app.jinja_env.autoescape("template.html")  # noqa: S101 — verifies autoescape policy
 
     with app.app_context():
         init_db()
