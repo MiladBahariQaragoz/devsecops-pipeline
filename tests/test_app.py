@@ -59,3 +59,19 @@ def test_create_item_empty_name_returns_400(client):
     """POST /items with an empty name must return 400."""
     response = client.post("/items", json={"name": "   "})
     assert response.status_code == 400
+
+
+def test_create_item_integer_name_returns_400(client):
+    """POST /items with an integer name must return 400 (not str(42) == '42')."""
+    response = client.post("/items", json={"name": 42})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "error" in data
+
+
+def test_create_item_null_name_returns_400(client):
+    """POST /items with a JSON null name must return 400 (not str(None) == 'None')."""
+    response = client.post("/items", json={"name": None})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "error" in data
