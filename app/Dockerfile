@@ -17,6 +17,10 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy application source.
 COPY __init__.py db.py ./
 
+# Give the non-root user write access to /app so it can create items.db at runtime.
+# Without this chown, /app is root:root 755 and appuser cannot write the SQLite file.
+RUN chown -R appuser:appgroup /app
+
 # Drop to non-root for the runtime process.
 USER appuser
 
