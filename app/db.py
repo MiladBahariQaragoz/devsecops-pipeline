@@ -16,8 +16,8 @@ def _db_path() -> str:
 def get_connection() -> sqlite3.Connection:
     path = _db_path()
     if path == ":memory:":
-        # Shared-cache URI so init_db() and request handlers see the same in-memory tables
-        # within the same process.  Each fresh process (new pytest session) starts clean.
+        # Shared-cache URI: all connections in the process share the same in-memory DB.
+        # Each new pytest session (new process) starts with a fresh database.
         conn = sqlite3.connect(
             "file::memory:?cache=shared", uri=True, check_same_thread=False
         )
