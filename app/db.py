@@ -51,7 +51,7 @@ def get_items() -> list[dict]:
     return [dict(row) for row in rows]
 
 
-def add_item(name: str) -> int:
+def add_item(name: str) -> int | None:
     """Insert an item by name. Uses a parameterized query to prevent SQLi.
 
     The ``with`` block commits on exit; ``lastrowid`` is read before exit.
