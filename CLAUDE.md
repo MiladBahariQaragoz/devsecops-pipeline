@@ -20,7 +20,7 @@ OPA/Rego policy gate). Full design: `docs/superpowers/specs/2026-06-30-devsecops
 
 - Python 3.12 (CI + Docker); local Python may differ — always use the venv.
 - Flask, SQLite (stdlib), pytest, ruff.
-- Docker image: `python:3.12-slim` (pinned digest in Dockerfile).
+- Docker image: `python:3.12-slim` (pinned to tag `3.12-slim`; no digest — see ADR-003).
 - CI: GitHub Actions (`.github/workflows/security.yml`).
 - Security gates (M2+): Semgrep, Trivy, Gitleaks, Checkov, conftest (OPA/Rego).
 
