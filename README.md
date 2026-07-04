@@ -1,55 +1,60 @@
-# 05 — DevSecOps CI/CD Pipeline with Security Gates
+# devsecops-pipeline
 
-**Difficulty:** ⭐⭐⭐ · **Est. effort:** 3–4 weeks · **Repo name:** `devsecops-pipeline`
+A GitHub Actions CI/CD pipeline for a small containerised Flask service that **fails the build
+on security findings** — five SARIF-emitting gates (Semgrep, Trivy, Gitleaks, Checkov) unified
+by an OPA/Rego policy gate (`conftest`) with a dated exception process, plus a Syft CycloneDX
+SBOM artifact.
 
-## Why this project
-A self-paced learning project, built for fun. I already enjoy working with Docker, GCP, Git,
-and CI/CD, so this is a natural place to go deeper on the security side — learning how to
-"shift left" and add the "Sec" to DevOps by building a pipeline that ships secure software,
-not just one that runs tests.
+**Full design:** `docs/superpowers/specs/2026-06-30-devsecops-pipeline-design.md`
 
-## What I'm learning
-- **DevSecOps** & secure SDLC
-- **Infrastructure as Code (IaC)** security (Terraform + scanning)
-- Container, dependency & secrets scanning (**SCA/SAST/IaC scanning**)
-- **Security automation** in CI/CD
+## Current status
 
-## Scope / what you build
-A GitHub Actions (or GitLab CI) pipeline for a sample app that **fails the build on security
-findings**, with every gate explained.
+| Milestone | Status |
+|-----------|--------|
+| M0 — Scaffold | ✅ Done |
+| M1 — Secure Flask app + Dockerfile + CI lint/test | ✅ Done |
+| M2 — OPA/Rego policy spine + conftest fixtures | ⬜ Planned |
+| M3 — Gates wired (5 scanners → SARIF → conftest) | ⬜ Planned |
+| M4 — SBOM + GCP Terraform | ⬜ Planned |
+| M5 — Policy docs + evidence | ⬜ Planned |
 
-1. **Sample app:** a small containerised Python/Flask service (reuse project 04's app) +
-   **Terraform** for some cloud resource.
-2. **Pipeline gates** (each blocks merge on high severity):
-   - **SAST:** Semgrep / CodeQL on the source.
-   - **SCA:** `pip-audit` / Trivy / Grype for vulnerable dependencies.
-   - **Secrets:** Gitleaks / TruffleHog pre-commit + CI.
-   - **Container scan:** Trivy/Grype on the built image; enforce a hardened base image.
-   - **IaC scan:** Checkov / tfsec / Trivy on the Terraform.
-   - **DAST (optional):** OWASP ZAP baseline scan against the running container.
-3. **SBOM:** generate a Software Bill of Materials (Syft / CycloneDX) as a build artifact.
-4. **Policy as code:** a documented severity threshold + exception process.
-5. **Evidence:** show a PR that fails the gate (planted vuln) and a clean PR that passes.
+## Security gates (wired in M3)
 
-## Definition of done
-- [ ] Public repo with a green pipeline + a deliberately failing branch (screenshots).
-- [ ] ≥4 distinct security gates wired and enforcing.
-- [ ] An SBOM artifact produced per build.
-- [ ] README explaining each gate, the tool, and why it matters in the SDLC.
-- [ ] A short "shift-left" rationale section.
+| Gate | Tool | What it detects |
+|------|------|-----------------|
+| SAST | Semgrep | SQL injection, XSS, and other code-level bugs |
+| SCA | Trivy fs | Known CVEs in Python dependencies |
+| Secrets | Gitleaks | Leaked credentials and API keys in source/history |
+| Container | Trivy image | CVEs in the base image and installed packages |
+| IaC | Checkov | GCP Terraform misconfigurations (public storage, open firewall) |
 
-## Build order
-1. Containerise the app; get a basic CI build green.
-2. Add gates one at a time; plant a vuln to prove each one fires.
-3. Add SBOM + IaC scanning + secrets scanning.
-4. Document the policy and exception workflow.
+Each gate emits SARIF, which a single **OPA/Rego policy gate** (`conftest`) evaluates. A
+HIGH-or-above finding with no valid, unexpired exception blocks the merge.
 
-## Learning resources
-- OWASP DevSecOps Guideline, Trivy / Grype / Syft (Aqua, Anchore) docs.
-- Semgrep, CodeQL, Checkov, Gitleaks docs; GitHub Actions security hardening guide.
-- "DevSecOps" TryHackMe / freeCodeCamp content.
+## Running locally
 
-## In a nutshell
-A DevSecOps CI/CD pipeline (GitHub Actions) with SAST, SCA, secrets, container, and IaC
-scanning gates plus SBOM generation; the pipeline blocks merges on high-severity findings and
-demonstrates shift-left security on a containerised service.
+> **FUSE mount note:** If your working tree is on a network filesystem (e.g. Google Drive via
+> rclone FUSE), `python3 -m venv .venv` will fail with an EIO symlink error. Create the
+> virtualenv off the mount instead. See [`docs/RUNBOOK.md`](docs/RUNBOOK.md) for the
+> off-repo venv setup used by this project.
+
+```bash
+# Virtualenv (standard — works on a local filesystem)
+python3 -m venv .venv
+.venv/bin/python -m pip install -r app/requirements.txt ruff pytest
+.venv/bin/python -m pip install -e .
+
+# Lint
+.venv/bin/ruff check .
+
+# Test
+.venv/bin/python -m pytest -q
+
+# Run the app
+FLASK_SECRET_KEY=dev .venv/bin/python -m flask --app app run
+```
+
+## Disclaimer
+
+See [DISCLAIMER.md](DISCLAIMER.md). This project is a learning exercise: scan-only, no
+`terraform apply`, no cloud spend, no real secrets.
