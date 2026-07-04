@@ -33,8 +33,13 @@ HIGH-or-above finding with no valid, unexpired exception blocks the merge.
 
 ## Running locally
 
+> **FUSE mount note:** If your working tree is on a network filesystem (e.g. Google Drive via
+> rclone FUSE), `python3 -m venv .venv` will fail with an EIO symlink error. Create the
+> virtualenv off the mount instead. See [`docs/RUNBOOK.md`](docs/RUNBOOK.md) for the
+> off-repo venv setup used by this project.
+
 ```bash
-# Virtualenv
+# Virtualenv (standard — works on a local filesystem)
 python3 -m venv .venv
 .venv/bin/python -m pip install -r app/requirements.txt ruff pytest
 .venv/bin/python -m pip install -e .

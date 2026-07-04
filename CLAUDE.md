@@ -30,6 +30,11 @@ OPA/Rego policy gate). Full design: `docs/superpowers/specs/2026-06-30-devsecops
 > `python3 -m venv .venv` fails with EIO inside the repo directory. The local virtualenv
 > lives **off-Drive** at `~/.venvs/devsecops-pipeline` (see `docs/DECISIONS.md` ADR-005).
 > Use the absolute venv path for all local tooling.
+>
+> **Path note:** The commands below use the absolute path `/home/sudo/.venvs/devsecops-pipeline`
+> — this is the current operator's home directory. It is intentionally hard-coded so the
+> commands are copy-paste runnable on the lab machine. Adjust the prefix to match your own
+> `$HOME` if you are running on a different account.
 
 ```bash
 # Lint
