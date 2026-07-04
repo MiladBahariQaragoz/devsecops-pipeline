@@ -4,6 +4,7 @@ Uses Flask's built-in test client — no Docker required.
 """
 
 import os
+import uuid
 
 import pytest
 
@@ -15,8 +16,11 @@ from app import create_app  # noqa: E402 — import after env var is set
 
 @pytest.fixture()
 def client():
-    # Use an in-memory database so tests are fully isolated and leave no file on disk.
-    app = create_app(test_config={"DATABASE": ":memory:", "TESTING": True})
+    # Each test gets a unique in-memory DB name so data cannot leak between tests.
+    # file:<name>?mode=memory&cache=shared keeps all connections within one test
+    # on the same in-memory DB while preventing any other test from seeing that data.
+    db_uri = f"file:test_{uuid.uuid4().hex}?mode=memory&cache=shared"
+    app = create_app(test_config={"DATABASE": db_uri, "TESTING": True})
     with app.test_client() as c:
         yield c
 
