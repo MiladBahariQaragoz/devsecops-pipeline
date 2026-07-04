@@ -3,15 +3,11 @@
 Uses Flask's built-in test client — no Docker required.
 """
 
-import os
 import uuid
 
 import pytest
 
-# Set the required env var BEFORE importing create_app so the factory does not raise.
-os.environ.setdefault("FLASK_SECRET_KEY", "test-secret-key-not-for-production")
-
-from app import create_app  # noqa: E402 — import after env var is set
+from app import create_app
 
 
 @pytest.fixture()
