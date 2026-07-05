@@ -13,16 +13,37 @@ severity_rank := {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 #   3. SARIF `level` (error/warning/note/none)
 #   4. MEDIUM, if nothing above is present
 result_severity(run, result) := sev if {
-	raw := result.properties["security-severity"]
-	sev := severity_bucket(to_number(raw))
+	sev := security_severity_field(result.properties)
 } else := sev if {
 	some rule in run.tool.driver.rules
 	rule.id == result.ruleId
-	raw := rule.properties["security-severity"]
-	sev := severity_bucket(to_number(raw))
+	sev := security_severity_field(rule.properties)
 } else := sev if {
 	sev := level_to_severity(result.level)
 } else := "MEDIUM"
+
+# security_severity_field resolves the normalized severity from a
+# "security-severity" property value on either a result or a rule object,
+# distinguishing three states:
+#   - key absent (properties has no security-severity, or properties itself
+#     is missing entirely): undefined, so callers fall through to the next
+#     priority tier (rule-level, then `level`, then MEDIUM).
+#   - key present but not a parseable number (e.g. corrupted-in-transit
+#     garbage like "9.8-CORRUPTED"): CRITICAL. Fail closed — a malformed
+#     authoritative score must not silently fall through to a coarser,
+#     lower-priority signal (SARIF `level` is often set independently of the
+#     true CVSS score by real scanners), same philosophy as exceptions.rego's
+#     `expired()` handling of calendar-invalid dates.
+#   - key present and a parseable number: bucketed via severity_bucket
+#     (existing behavior, unchanged).
+security_severity_field(properties) := sev if {
+	raw := object.get(properties, "security-severity", null)
+	raw != null
+	sev := severity_bucket(to_number(raw))
+} else := "CRITICAL" if {
+	raw := object.get(properties, "security-severity", null)
+	raw != null
+}
 
 # severity_bucket maps a CVSS-style 0.0-10.0 score onto the common scale,
 # using the CVSS v3.1 Qualitative Severity Rating Scale cutoffs.
@@ -53,8 +74,18 @@ deny contains msg if {
 	sev := result_severity(run, result)
 	severity_rank[sev] >= severity_rank[severity_threshold]
 	not is_excepted(result)
+
+	# tool_name/rule_id are cosmetic, message-only identifiers. They must
+	# never gate the denial itself: if a run/result is missing these fields,
+	# the finding still needs to be denied on its merits (severity +
+	# exception status, already established above). Using object.get with
+	# safe defaults here — instead of an unguarded run.tool.driver.name /
+	# result.ruleId reference — prevents an unrelated formatting field from
+	# making the entire rule body (and thus a real denial) silently vanish.
+	tool_name := object.get(run, ["tool", "driver", "name"], "unknown-tool")
+	rule_id := object.get(result, "ruleId", "unknown-rule")
 	msg := sprintf(
 		"%s: %s (severity=%s) has no valid, unexpired exception",
-		[run.tool.driver.name, result.ruleId, sev],
+		[tool_name, rule_id, sev],
 	)
 }

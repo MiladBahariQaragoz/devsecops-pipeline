@@ -108,3 +108,33 @@ test_deny_end_to_end_expired_exception_still_denies if {
 	}]
 	count(deny) > 0 with input as input_doc with data.exceptions as exceptions
 }
+
+# Regression (Bug 1): a run whose tool.driver.name is missing must still be
+# denied. Before the fix, the unguarded run.tool.driver.name reference in
+# msg's sprintf made the whole deny rule body undefined for this finding,
+# silently dropping a real denial with zero diagnostic output.
+test_missing_tool_driver_name_still_denies if {
+	input_doc := {"runs": [{
+		"tool": {"driver": {"rules": []}},
+		"results": [{"ruleId": "r1", "level": "error", "locations": []}],
+	}]}
+	count(deny) > 0 with input as input_doc with data.exceptions as []
+}
+
+# Regression (Bug 2): a present-but-non-numeric security-severity value must
+# fail closed to CRITICAL rather than silently falling through to a coarser,
+# lower-priority `level` signal. Before the fix, this input (corrupted
+# top-priority score + a "warning" level) evaluated to MEDIUM and was
+# allowed through.
+test_garbage_security_severity_fails_closed if {
+	input_doc := {"runs": [{
+		"tool": {"driver": {"name": "TestTool", "rules": []}},
+		"results": [{
+			"ruleId": "r1",
+			"level": "warning",
+			"locations": [],
+			"properties": {"security-severity": "9.8-CORRUPTED"},
+		}],
+	}]}
+	count(deny) > 0 with input as input_doc with data.exceptions as []
+}
