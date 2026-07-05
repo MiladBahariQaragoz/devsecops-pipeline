@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Trivy",
+          "informationUri": "https://trivy.dev",
+          "rules": [
+            {"id": "CVE-2019-1010083", "properties": {"security-severity": "7.5"}}
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CVE-2019-1010083",
+          "message": {
+            "text": "flask 0.12.2: denial of service via crafted Content-Type header in multipart form data parsing."
+          },
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "app/requirements.txt"}}}
+          ]
+        }
+      ]
+    }
+  ]
+}
