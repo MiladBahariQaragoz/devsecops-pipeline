@@ -45,6 +45,17 @@ test_malformed_expires_denies if {
 	not is_excepted(result) with data.exceptions as exceptions
 }
 
+test_calendar_invalid_expires_denies if {
+	exceptions := [{
+		"rule": "test.rule.id",
+		"reason": "test",
+		"owner": "tester",
+		"expires": "2025-13-01",
+	}]
+	result := {"ruleId": "test.rule.id", "locations": []}
+	not is_excepted(result) with data.exceptions as exceptions
+}
+
 test_wrong_rule_id_not_excepted if {
 	exceptions := [{
 		"rule": "some.other.rule",

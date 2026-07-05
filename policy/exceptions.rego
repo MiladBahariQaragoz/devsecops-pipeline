@@ -30,6 +30,17 @@ expired(exc) if {
 	time.now_ns() > expiry_ns
 }
 
+# Regex-shaped but calendar-invalid dates (e.g. "2025-02-30", "2025-13-01")
+# make time.parse_rfc3339_ns return undefined rather than erroring, which
+# would otherwise leave expired(exc) undefined too — and "not expired(exc)"
+# on an undefined term succeeds, silently making the exception permanent.
+# Treat that case as expired to keep the fail-closed guarantee.
+expired(exc) if {
+	exc.expires
+	valid_date_format(exc.expires)
+	not time.parse_rfc3339_ns(sprintf("%sT23:59:59Z", [exc.expires]))
+}
+
 # valid_date_format guards time.parse_rfc3339_ns against non-YYYY-MM-DD
 # strings, which would otherwise raise a hard Rego evaluation error instead
 # of a safely-undefined result.
