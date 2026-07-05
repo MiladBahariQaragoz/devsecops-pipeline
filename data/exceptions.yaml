@@ -14,7 +14,9 @@
 #              ends with this path. Omit to except the rule id repo-wide.
 #
 # Worked example (matches fixtures/failing/semgrep.sarif's planted XSS finding —
-# uncomment when that specific finding needs excepting, e.g. the M5 exception demo):
+# to activate, e.g. for the M5 exception demo: delete the `exceptions: []` line
+# below and replace it with `exceptions:` followed by this one entry, indented
+# as shown):
 #
 #   - rule: "python.flask.security.xss.audit"
 #     reason: "False positive — value is constant, not user input"
