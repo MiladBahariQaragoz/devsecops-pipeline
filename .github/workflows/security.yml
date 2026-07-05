@@ -47,44 +47,71 @@ jobs:
           FLASK_SECRET_KEY: ci-test-secret-not-for-production
         run: pytest -q
 
-  # ── TODO M2: OPA/Rego policy unit tests ────────────────────────────────────
-  # Uncomment in M2 after policy/ and fixtures/ are added.
-  # BEFORE UNCOMMENTING: pin all uses: lines to full commit SHAs (supply-chain hardening).
-  #
-  # opa-policy-tests:
-  #   name: OPA policy unit tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - name: Install OPA
-  #       run: |
-  #         curl -L -o /usr/local/bin/opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
-  #         chmod +x /usr/local/bin/opa
-  #     - name: Run opa test
-  #       run: opa test policy/
-  #
-  # ── TODO M2: conftest gate over committed SARIF fixtures ──────────────────
-  #
-  # conftest-fixtures:
-  #   name: conftest gate (offline fixtures)
-  #   runs-on: ubuntu-latest
-  #   needs: opa-policy-tests
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - name: Install conftest
-  #       run: |
-  #         # Pipe directly so tar never reads from the same path it is writing.
-  #         # Saving to a file first (e.g. -o /usr/local/bin/conftest) then running
-  #         # tar on that path corrupts the binary (tar reads the archive while the
-  #         # binary is being overwritten at the same destination).
-  #         curl -L https://github.com/open-policy-agent/conftest/releases/download/v0.55.0/conftest_0.55.0_Linux_x86_64.tar.gz \
-  #           | tar -xz -C /usr/local/bin/ conftest
-  #     - name: conftest clean fixtures (must pass)
-  #       run: conftest run --policy policy/ fixtures/clean/
-  #     - name: conftest failing fixtures (must deny)
-  #       run: |
-  #         conftest run --policy policy/ fixtures/failing/ && exit 1 || exit 0
-  #
+  # ── OPA/Rego policy unit tests ─────────────────────────────────────────────
+  # opa test policy/ — the deterministic, offline core. See docs/DECISIONS.md
+  # ADR-009 for the pinned-version + checksum-verification rationale.
+  opa-policy-tests:
+    name: OPA policy unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install OPA (pinned v1.18.2, checksum-verified)
+        run: |
+          set -euo pipefail
+          OPA_VERSION=v1.18.2
+          ASSET=opa_linux_amd64_static
+          curl -sSL -o "${ASSET}" "https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/${ASSET}"
+          curl -sSL -o "${ASSET}.sha256" "https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/${ASSET}.sha256"
+          sha256sum -c "${ASSET}.sha256"
+          chmod +x "${ASSET}"
+          sudo mv "${ASSET}" /usr/local/bin/opa
+          opa version
+
+      - name: Run opa test
+        run: opa test policy/ -v
+
+  # ── conftest gate over committed SARIF fixtures (offline) ──────────────────
+  # No live scanners, no network calls in the policy evaluation itself — proves
+  # the decision point works before M3 wires any real scanner.
+  conftest-fixtures:
+    name: conftest gate (offline fixtures)
+    runs-on: ubuntu-latest
+    needs: opa-policy-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install conftest (pinned v0.68.2, checksum-verified)
+        run: |
+          set -euo pipefail
+          CONFTEST_VERSION=0.68.2
+          ASSET="conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          curl -sSL -o "${ASSET}" "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/${ASSET}"
+          curl -sSL -o checksums.txt "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/checksums.txt"
+          grep " ${ASSET}\$" checksums.txt | sha256sum -c -
+          tar -xzf "${ASSET}" conftest
+          chmod +x conftest
+          sudo mv conftest /usr/local/bin/conftest
+          rm "${ASSET}" checksums.txt
+          conftest --version
+
+      - name: conftest — fixtures/clean/ must PASS
+        run: conftest test --policy policy --data data --parser json fixtures/clean/*.sarif
+
+      - name: conftest — fixtures/failing/ must be DENIED
+        run: |
+          set +e
+          conftest test --policy policy --data data --parser json fixtures/failing/*.sarif
+          exit_code=$?
+          set -e
+          if [ "$exit_code" -ne 1 ]; then
+            echo "ERROR: expected conftest to exit 1 (policy failures), got exit code $exit_code" >&2
+            exit 1
+          fi
+          echo "OK: fixtures/failing/ correctly denied (exit code 1)"
+
   # ── TODO M3: SAST — Semgrep ───────────────────────────────────────────────
   # BEFORE UNCOMMENTING: resolve current SHA for returntocorp/semgrep-action and pin it.
   #
