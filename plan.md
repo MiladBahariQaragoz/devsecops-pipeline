@@ -4,7 +4,12 @@ Milestone tracker. Full design: `docs/superpowers/specs/2026-06-30-devsecops-pip
 
 **Build approach:** bottom-up. The OPA/Rego **policy gate is validated offline** against committed
 SARIF fixtures (M2) *before* any live scanner is wired (M3), so the repo has a tested decision
-point early. **Lab is Linux; Terraform is scan-only — no `terraform apply`, no cloud spend.**
+point early. **Lab is Linux.**
+
+**Scope note (2026-07-09):** deliberately right-sized for a hobby/portfolio project. The IaC gate
+(Checkov + GCP Terraform) and the M6 stretch gates (DAST, Grype, cosign, pre-commit) were **cut** —
+they add CI ceremony without changing the core story. Ships as **4 live gates** (SAST, SCA, secrets,
+container) + a per-build **SBOM**, unified by the OPA/Rego policy gate.
 
 ## Milestones
 
@@ -19,19 +24,19 @@ point early. **Lab is Linux; Terraform is scan-only — no `terraform apply`, no
 - [x] **M3 — Gates wired** — Semgrep (SAST), Trivy fs (SCA), Gitleaks (secrets), Trivy image
   (container) → SARIF → conftest, all in one `security-gates` job (scanners emit SARIF, conftest
   enforces). Plant `demo/failing-gates` (one finding per gate); prove each fires and blocks the
-  merge. **IaC (Checkov) moved to M4** — it needs `infra/`, which M4 introduces. *(scanners)*
-- [ ] **M4 — SBOM + IaC** — Syft → CycloneDX artifact per build; GCP Terraform clean baseline in
-  `infra/` + Checkov gate (added to the `security-gates` job, feeding the same conftest gate);
-  failing-branch IaC misconfig (public GCS bucket, `0.0.0.0/0` firewall). *(syft/checkov)*
+  merge. *(scanners)*
+- [x] **M4 — SBOM** — Syft → CycloneDX artifact per build, uploaded as a build artifact. No new
+  gate — the SBOM is evidence, not an enforcement point. *(syft)*
 - [ ] **M5 — Policy docs + evidence** — `docs/POLICY.md` (threshold + exception request/approval
   workflow); screenshots: green `main`, blocked `demo/failing-gates` PR, exception-suppresses-one
   demo. README per-gate "why it matters" + shift-left rationale.
-- [ ] **M6 — Stretch** — DAST (ZAP) gate; Grype-the-SBOM gate; SARIF upload to GitHub
-  code-scanning; cosign image signing; pre-commit hardening.
+
+**Cut (see scope note above):** ~~M4 IaC — Checkov + GCP Terraform~~; ~~M6 stretch — DAST (ZAP),
+Grype-the-SBOM, SARIF upload to code-scanning, cosign, pre-commit~~.
 
 ## Definition of done
 
-See spec §13. Headline: a GitHub Actions pipeline with **5 enforcing gates** (SAST, SCA, secrets,
-container, IaC) unified by an **OPA/Rego policy-as-code gate** with a tested, dated exception
-process, **+ a per-build SBOM** — green on `main`, merge-blocked on a planted-vuln branch, all
-provable offline via `opa test` + `conftest` on committed SARIF fixtures.
+Headline: a GitHub Actions pipeline with **4 enforcing gates** (SAST, SCA, secrets, container)
+unified by an **OPA/Rego policy-as-code gate** with a tested, dated exception process, **+ a
+per-build SBOM** — green on `main`, merge-blocked on a planted-vuln branch, all provable offline
+via `opa test` + `conftest` on committed SARIF fixtures.

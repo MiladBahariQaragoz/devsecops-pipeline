@@ -209,3 +209,50 @@ output gates correctly. `main` stays green (its clean scans produce zero results
 the offline fixtures still pass/deny unchanged. This is the concrete payoff of the
 build order — validating the policy offline first, then discovering the real-SARIF
 gaps the moment live scanners ran.
+
+## ADR-013 — Right-size scope: cut the IaC gate and the M6 stretch gates
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Supersedes:** ADR-002 (IaC target: GCP Terraform, scan-only) — no longer in scope.
+**Context:** This is a self-paced hobby/portfolio project, not a production platform.
+After M3 the pipeline already demonstrates the full DevSecOps pattern — multiple
+SARIF-emitting scanners unified by a policy-as-code gate that blocks merges — across
+four gates (SAST, SCA, secrets, container). The originally-planned fifth gate (IaC:
+Checkov over a GCP Terraform baseline in `infra/`) and the M6 stretch gates (DAST/ZAP,
+Grype-the-SBOM, SARIF upload to code-scanning, cosign signing, pre-commit) each add a
+new tool, its pins, a failing-branch fixture, and CI runtime — ceremony that does not
+change the core story a reviewer takes away.
+**Decision:** Cut the IaC gate and all M6 stretch gates. Final scope is **4 live gates
++ a per-build SBOM** (Syft, M4), unified by the OPA/Rego policy gate. No `infra/`, no
+Terraform, no Checkov. The definition of done drops from five enforcing gates to four.
+**Consequences:** Less to build and maintain; the SBOM (M4) is the last piece of new
+CI, and M5 is pure docs/evidence. The policy already handles Checkov SARIF (the M2
+fixtures include it), so re-adding an IaC gate later is a localized change if ever
+wanted. `README.md`, `CLAUDE.md`, `plan.md`, and `security.yml` were updated to reflect
+four gates; the design spec §13 (five gates) is left as the original design of record,
+with this ADR as the governing amendment.
+
+## ADR-014 — SBOM: Syft CycloneDX of the built image, in the security-gates job
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Context:** M4 adds a per-build Software Bill of Materials. Three choices: (a) the tool
+(anchore/sbom-action vs the Syft container image), (b) the target (source tree vs the
+built image), and (c) where it runs (a separate `sbom` job vs the existing
+`security-gates` job). The marketplace `anchore/sbom-action` would need its own
+commit-SHA pin and pulls transitive action code; a separate job would rebuild the image
+just to scan it.
+**Decision:** Run **Syft in its pinned official image** (`anchore/syft:v1.46.0`) in a
+plain `run:` step, mirroring the scanner discipline in ADR-011. Scan the **built
+`devsecops-app:ci` image** (not the source tree), so the SBOM reflects exactly what
+ships — OS packages plus Python deps. Emit **CycloneDX JSON** and upload it as the
+`sbom` build artifact (`if: always()`). Add the step to the **existing
+`security-gates` job**, after the Trivy image gate, reusing the image that job already
+builds — no duplicate build. The SBOM is **evidence, not a gate**: Syft fails only on a
+real tooling error, never on SBOM contents, so it never blocks a merge.
+**Consequences:** One pinned image, no marketplace-action SHA to track; the SBOM covers
+the full runtime image (≈2.7k components locally). It is downloadable per run for
+audit/diff and is the natural feed for a future Grype-the-SBOM gate if that stretch item
+is ever revived. No new enforcement path, so `main` stays green regardless of SBOM
+contents.

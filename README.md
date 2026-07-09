@@ -1,9 +1,9 @@
 # devsecops-pipeline
 
 A GitHub Actions CI/CD pipeline for a small containerised Flask service that **fails the build
-on security findings** — five SARIF-emitting gates (Semgrep, Trivy, Gitleaks, Checkov) unified
-by an OPA/Rego policy gate (`conftest`) with a dated exception process, plus a Syft CycloneDX
-SBOM artifact.
+on security findings** — four SARIF-emitting gates (Semgrep, Trivy fs, Gitleaks, Trivy image)
+unified by an OPA/Rego policy gate (`conftest`) with a dated exception process, plus a Syft
+CycloneDX SBOM artifact.
 
 **Full design:** `docs/superpowers/specs/2026-06-30-devsecops-pipeline-design.md`
 
@@ -13,10 +13,13 @@ SBOM artifact.
 |-----------|--------|
 | M0 — Scaffold | ✅ Done |
 | M1 — Secure Flask app + Dockerfile + CI lint/test | ✅ Done |
-| M2 — OPA/Rego policy spine + conftest fixtures | ⬜ Planned |
-| M3 — Gates wired (5 scanners → SARIF → conftest) | ⬜ Planned |
-| M4 — SBOM + GCP Terraform | ⬜ Planned |
+| M2 — OPA/Rego policy spine + conftest fixtures | ✅ Done |
+| M3 — Gates wired (4 scanners → SARIF → conftest) | ✅ Done |
+| M4 — SBOM (Syft CycloneDX) | ✅ Done |
 | M5 — Policy docs + evidence | ⬜ Planned |
+
+> **Scope:** deliberately right-sized for a hobby/portfolio project. The IaC gate (Checkov +
+> Terraform) and stretch gates (DAST, Grype, cosign) were cut — see `plan.md`.
 
 ## Security gates (wired in M3)
 
@@ -24,9 +27,8 @@ SBOM artifact.
 |------|------|-----------------|
 | SAST | Semgrep | SQL injection, XSS, and other code-level bugs |
 | SCA | Trivy fs | Known CVEs in Python dependencies |
-| Secrets | Gitleaks | Leaked credentials and API keys in source/history |
+| Secrets | Gitleaks | Leaked credentials and API keys in the working tree |
 | Container | Trivy image | CVEs in the base image and installed packages |
-| IaC | Checkov | GCP Terraform misconfigurations (public storage, open firewall) |
 
 Each gate emits SARIF, which a single **OPA/Rego policy gate** (`conftest`) evaluates. A
 HIGH-or-above finding with no valid, unexpired exception blocks the merge.
@@ -56,5 +58,5 @@ FLASK_SECRET_KEY=dev .venv/bin/python -m flask --app app run
 
 ## Disclaimer
 
-See [DISCLAIMER.md](DISCLAIMER.md). This project is a learning exercise: scan-only, no
-`terraform apply`, no cloud spend, no real secrets.
+See [DISCLAIMER.md](DISCLAIMER.md). This project is a learning exercise: scan-only, no cloud
+spend, no real secrets.

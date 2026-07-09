@@ -5,10 +5,12 @@ Project guide for Claude and agentic workers.
 ## What this repo is
 
 A self-paced learning project: a GitHub Actions CI/CD pipeline for a small containerised Flask
-service that **fails the build on security findings** (5 SARIF-emitting gates unified by an
-OPA/Rego policy gate). Full design: `docs/superpowers/specs/2026-06-30-devsecops-pipeline-design.md`.
+service that **fails the build on security findings** (4 SARIF-emitting gates unified by an
+OPA/Rego policy gate, plus a per-build SBOM). Full design:
+`docs/superpowers/specs/2026-06-30-devsecops-pipeline-design.md`.
 
-**Lab: Linux. Terraform: scan-only — no `terraform apply`, no cloud spend.**
+**Lab: Linux. No live cloud, no cloud spend.** IaC (Checkov/Terraform) and stretch gates were
+cut to right-size the project — see `plan.md`.
 
 ## Repo info
 
@@ -22,7 +24,7 @@ OPA/Rego policy gate). Full design: `docs/superpowers/specs/2026-06-30-devsecops
 - Flask, SQLite (stdlib), pytest, ruff.
 - Docker image: `python:3.12-slim` (pinned to tag `3.12-slim`; no digest — see ADR-003).
 - CI: GitHub Actions (`.github/workflows/security.yml`).
-- Security gates (M2+): Semgrep, Trivy, Gitleaks, Checkov, conftest (OPA/Rego).
+- Security gates (M2+): Semgrep, Trivy (fs + image), Gitleaks, conftest (OPA/Rego).
 
 ## Virtualenv (Linux — ALWAYS use this)
 
@@ -74,7 +76,7 @@ All checks must be green before committing. Never fake a pass.
 
 ## Cost & safety invariants (non-negotiable)
 
-- No `terraform apply`; no live cloud; no billable resources in v1.
+- No live cloud; no billable resources in v1.
 - Planted "secret" on `demo/failing-gates` is an obvious fake (never a real credential).
 - Vulnerable artifacts never deployed; ephemeral CI containers torn down with the job.
 - `.env*` is git-ignored.
