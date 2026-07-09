@@ -27,9 +27,10 @@ container) + a per-build **SBOM**, unified by the OPA/Rego policy gate.
   merge. *(scanners)*
 - [x] **M4 — SBOM** — Syft → CycloneDX artifact per build, uploaded as a build artifact. No new
   gate — the SBOM is evidence, not an enforcement point. *(syft)*
-- [ ] **M5 — Policy docs + evidence** — `docs/POLICY.md` (threshold + exception request/approval
-  workflow); screenshots: green `main`, blocked `demo/failing-gates` PR, exception-suppresses-one
-  demo. README per-gate "why it matters" + shift-left rationale.
+- [x] **M5 — Policy docs + evidence** — `docs/POLICY.md` (threshold + exception request/approval
+  workflow); `docs/EVIDENCE.md`: green `main`, blocked `demo/failing-gates` PR,
+  exception-suppresses-one demo (all with CI run links + reproducible commands). README per-gate
+  "why it matters" + shift-left rationale.
 
 **Cut (see scope note above):** ~~M4 IaC — Checkov + GCP Terraform~~; ~~M6 stretch — DAST (ZAP),
 Grype-the-SBOM, SARIF upload to code-scanning, cosign, pre-commit~~.

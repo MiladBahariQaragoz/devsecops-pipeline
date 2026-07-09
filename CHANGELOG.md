@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   TODO was removed. See ADR-013.
 
 ### Added
+- M5 evidence: `docs/EVIDENCE.md` proves the pipeline behaves as claimed — green `main`
+  (run link + all four jobs), merge-blocked `demo/failing-gates` PR #13 (the conftest deny
+  showing all four gates fire from one enforcement point), and a reproducible
+  exception-suppresses-one walkthrough (7 → 6 fixture denials). `README.md` gains a per-gate
+  "why it matters" section + shift-left rationale; `POLICY.md` points to the evidence and the
+  one-time branch-protection setting.
 - M4 SBOM: the `security-gates` job now generates a per-build Software Bill of Materials
   with Syft (pinned `anchore/syft:v1.46.0`) from the built `devsecops-app:ci` image, in
   CycloneDX JSON, uploaded as the `sbom` build artifact. Evidence, not a gate — it never
