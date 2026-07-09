@@ -209,3 +209,26 @@ output gates correctly. `main` stays green (its clean scans produce zero results
 the offline fixtures still pass/deny unchanged. This is the concrete payoff of the
 build order — validating the policy offline first, then discovering the real-SARIF
 gaps the moment live scanners ran.
+
+## ADR-013 — Right-size scope: cut the IaC gate and the M6 stretch gates
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Supersedes:** ADR-002 (IaC target: GCP Terraform, scan-only) — no longer in scope.
+**Context:** This is a self-paced hobby/portfolio project, not a production platform.
+After M3 the pipeline already demonstrates the full DevSecOps pattern — multiple
+SARIF-emitting scanners unified by a policy-as-code gate that blocks merges — across
+four gates (SAST, SCA, secrets, container). The originally-planned fifth gate (IaC:
+Checkov over a GCP Terraform baseline in `infra/`) and the M6 stretch gates (DAST/ZAP,
+Grype-the-SBOM, SARIF upload to code-scanning, cosign signing, pre-commit) each add a
+new tool, its pins, a failing-branch fixture, and CI runtime — ceremony that does not
+change the core story a reviewer takes away.
+**Decision:** Cut the IaC gate and all M6 stretch gates. Final scope is **4 live gates
++ a per-build SBOM** (Syft, M4), unified by the OPA/Rego policy gate. No `infra/`, no
+Terraform, no Checkov. The definition of done drops from five enforcing gates to four.
+**Consequences:** Less to build and maintain; the SBOM (M4) is the last piece of new
+CI, and M5 is pure docs/evidence. The policy already handles Checkov SARIF (the M2
+fixtures include it), so re-adding an IaC gate later is a localized change if ever
+wanted. `README.md`, `CLAUDE.md`, `plan.md`, and `security.yml` were updated to reflect
+four gates; the design spec §13 (five gates) is left as the original design of record,
+with this ADR as the governing amendment.

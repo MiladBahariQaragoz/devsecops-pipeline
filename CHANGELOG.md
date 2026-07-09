@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Right-sized scope for a hobby/portfolio project: **cut the IaC gate** (Checkov + GCP
+  Terraform) and the M6 stretch gates (DAST, Grype, cosign, pre-commit). Ships as 4 live
+  gates (SAST, SCA, secrets, container) + a per-build SBOM, unified by the OPA/Rego policy
+  gate. `plan.md`, `README.md`, and `CLAUDE.md` updated to match; the `security.yml` IaC
+  TODO was removed. See ADR-013.
+
 ### Added
 - M3 live security gates: a `security-gates` CI job runs four real scanners in pinned
   official images — Semgrep (SAST, `p/python`), Trivy fs (SCA, `requirements.txt`),

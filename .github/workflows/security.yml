@@ -199,11 +199,6 @@ jobs:
       - name: Policy gate — conftest over live SARIF (deny ⇒ merge blocked)
         run: conftest test --policy policy --data data --parser json sarif/*.sarif
 
-  # ── TODO M4: IaC — Checkov (add with infra/) ─────────────────────────────
-  # M4 adds a clean GCP Terraform baseline in infra/ + a Checkov step in the
-  # security-gates job above (scan infra/ → checkov.sarif → same conftest gate).
-  # The demo/failing-gates branch plants a public GCS bucket + 0.0.0.0/0 firewall.
-  #
   # ── TODO M4: SBOM — Syft ─────────────────────────────────────────────────
   # BEFORE UNCOMMENTING: resolve current SHAs for anchore/sbom-action and upload-artifact, pin them.
   #
