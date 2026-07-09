@@ -16,7 +16,7 @@ CycloneDX SBOM artifact.
 | M2 — OPA/Rego policy spine + conftest fixtures | ✅ Done |
 | M3 — Gates wired (4 scanners → SARIF → conftest) | ✅ Done |
 | M4 — SBOM (Syft CycloneDX) | ✅ Done |
-| M5 — Policy docs + evidence | ⬜ Planned |
+| M5 — Policy docs + evidence | ✅ Done |
 
 > **Scope:** deliberately right-sized for a hobby/portfolio project. The IaC gate (Checkov +
 > Terraform) and stretch gates (DAST, Grype, cosign) were cut — see `plan.md`.
@@ -32,6 +32,33 @@ CycloneDX SBOM artifact.
 
 Each gate emits SARIF, which a single **OPA/Rego policy gate** (`conftest`) evaluates. A
 HIGH-or-above finding with no valid, unexpired exception blocks the merge.
+
+### Why each gate matters
+
+- **SAST (Semgrep)** — catches injection, XSS, and unsafe-API bugs in *our own code* before
+  they ship. These never show up in a dependency scan because we wrote them.
+- **SCA (Trivy fs)** — most application code is third-party. A pinned dependency with a known
+  CVE is the most common real-world breach path; this gate fails the build on one.
+- **Secrets (Gitleaks)** — a leaked key is exploitable the instant it lands in history.
+  Blocking at the PR keeps it out of the repo in the first place, which is far cheaper than
+  rotating a credential after the fact.
+- **Container (Trivy image)** — the app ships as an image, so its base OS and system packages
+  are part of the attack surface. Scanning the built image catches CVEs the source scan can't
+  see. `--ignore-unfixed` keeps the gate actionable — only fix-available CVEs block.
+
+### Shift-left rationale
+
+Every gate runs **on the pull request, before merge** — the cheapest possible place to catch a
+security issue. The cost of a finding rises sharply the later it's found (PR → main →
+release → production → incident), so the whole design is about moving detection as far left as
+it goes: a developer sees a red check on their own PR and fixes it in the same context they
+created it, with no security-team round-trip. The policy is **policy-as-code** (`opa test`,
+committed SARIF fixtures) so the merge-blocking decision is itself tested and reviewable, and
+the exception process is **dated and PR-reviewed** so risk is accepted explicitly and expires
+on its own rather than accumulating silently.
+
+See [`docs/EVIDENCE.md`](docs/EVIDENCE.md) for proof: green `main`, a merge-blocked demo PR,
+and an exception suppressing exactly one finding.
 
 ## Running locally
 

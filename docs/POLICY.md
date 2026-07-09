@@ -106,8 +106,10 @@ forever.
 
 ## Scope
 
-The `opa-policy-tests` and `conftest-fixtures` CI jobs
-(`.github/workflows/security.yml`) run on every push and pull request, and are
-green as of M2. Making the live per-gate `conftest` job (wired in M3) a
-**required status check** on `main`'s branch protection is a one-time GitHub
-repository setting — tracked as M5 evidence work, not part of this plan.
+The `opa-policy-tests`, `conftest-fixtures`, and live `security-gates` CI jobs
+(`.github/workflows/security.yml`) run on every push and pull request. Making
+`security-gates` (and the two offline policy jobs) a **required status check** on
+`main`'s branch protection is a one-time GitHub repository setting — see
+[`EVIDENCE.md`](EVIDENCE.md) → *Branch protection*. Proof that the gates behave as
+described (green `main`, blocked demo PR, exception suppressing one finding) also
+lives in [`EVIDENCE.md`](EVIDENCE.md).
