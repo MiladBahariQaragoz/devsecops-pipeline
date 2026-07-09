@@ -137,8 +137,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-        with:
-          fetch-depth: 0  # Gitleaks scans the full git history
 
       - name: Prepare SARIF output dir
         run: mkdir -p sarif
@@ -154,11 +152,17 @@ jobs:
             --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 \
             --format sarif --output /src/sarif/trivy-fs.sarif /src/app/requirements.txt
 
-      - name: Secrets — Gitleaks (full repo + history)
+      - name: Secrets — Gitleaks (working tree)
         run: |
+          # --no-git scans the checked-out files, not git history. History scanning
+          # would flag the deliberately-planted fake secret on the demo/failing-gates
+          # branch on *every* branch (gitleaks walks all reachable refs), reddening
+          # clean branches. Scanning the working tree gates secrets present in the code
+          # as it stands, which is what we want; historical-secret scanning is a
+          # separate future concern. See docs/DECISIONS.md ADR-011.
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 detect \
-            --source=/repo --report-format sarif --report-path /repo/sarif/gitleaks.sarif \
-            --exit-code 0 --no-banner
+            --source=/repo --no-git --report-format sarif \
+            --report-path /repo/sarif/gitleaks.sarif --exit-code 0 --no-banner
 
       - name: Build image
         run: docker build -t devsecops-app:ci app/
