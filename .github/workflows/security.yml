@@ -62,8 +62,13 @@ jobs:
           set -euo pipefail
           OPA_VERSION=v1.18.2
           ASSET=opa_linux_amd64_static
-          curl -sSL -o "${ASSET}" "https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/${ASSET}"
-          curl -sSL -o "${ASSET}.sha256" "https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/${ASSET}.sha256"
+          # --fail: a 4xx/5xx from the release CDN must abort, not silently save an
+          # HTML error page that then fails checksum verification with a misleading
+          # "no properly formatted checksum lines" error. --retry rides out transient
+          # CDN blips. See docs/DECISIONS.md ADR-010.
+          DL="curl --fail --retry 3 --retry-delay 2 --retry-all-errors -sSL"
+          $DL -o "${ASSET}" "https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/${ASSET}"
+          $DL -o "${ASSET}.sha256" "https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/${ASSET}.sha256"
           sha256sum -c "${ASSET}.sha256"
           chmod +x "${ASSET}"
           sudo mv "${ASSET}" /usr/local/bin/opa
@@ -88,8 +93,11 @@ jobs:
           set -euo pipefail
           CONFTEST_VERSION=0.68.2
           ASSET="conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
-          curl -sSL -o "${ASSET}" "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/${ASSET}"
-          curl -sSL -o checksums.txt "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/checksums.txt"
+          # --fail/--retry: abort on a bad HTTP response instead of saving an error
+          # page, and ride out transient CDN blips. See docs/DECISIONS.md ADR-010.
+          DL="curl --fail --retry 3 --retry-delay 2 --retry-all-errors -sSL"
+          $DL -o "${ASSET}" "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/${ASSET}"
+          $DL -o checksums.txt "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/checksums.txt"
           grep " ${ASSET}\$" checksums.txt | sha256sum -c -
           tar -xzf "${ASSET}" conftest
           chmod +x conftest
