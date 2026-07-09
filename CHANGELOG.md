@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- M3 live security gates: a `security-gates` CI job runs four real scanners in pinned
+  official images — Semgrep (SAST, `p/python`), Trivy fs (SCA, `requirements.txt`),
+  Gitleaks (secrets, full history), Trivy image (container) — each emitting SARIF into
+  `sarif/`. A single `conftest` step over the live SARIF is the sole enforcement point,
+  denying HIGH+ findings without a valid exception. Scanners run non-failing; Trivy uses
+  `--ignore-unfixed` so unfixable base-image OS CVEs don't red `main`. SARIF uploaded as a
+  build artifact. IaC/Checkov deferred to M4 (needs `infra/`). See ADR-011.
+
 ### Fixed
 - CI tool installs (`opa`, `conftest`) now download with `curl --fail --retry`, so a
   transient release-CDN error aborts loudly at the download instead of poisoning the

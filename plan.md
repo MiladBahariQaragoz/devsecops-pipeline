@@ -13,15 +13,16 @@ point early. **Lab is Linux; Terraform is scan-only — no `terraform apply`, no
   `.github/workflows/security.yml` shell. *(Linux box)*
 - [x] **M1 — App** — fresh minimal **secure** Flask service in `app/` + `Dockerfile`
   (pinned `python:3.12-slim`) + smoke test; basic CI build green. *(Docker)*
-- [ ] **M2 — Policy spine** — `policy/*.rego` (severity threshold + exception/expiry logic) +
+- [x] **M2 — Policy spine** — `policy/*.rego` (severity threshold + exception/expiry logic) +
   `data/exceptions.yaml` + `opa test policy/`; `conftest` over committed `fixtures/clean/` (passes)
   and `fixtures/failing/` (denies). Gate works **before** any live scanner. *(opa/conftest)*
 - [ ] **M3 — Gates wired** — Semgrep (SAST), Trivy fs (SCA), Gitleaks (secrets), Trivy image
-  (container), Checkov/tfsec (IaC) → SARIF → conftest. Plant `demo/failing-gates` (one finding per
-  gate); prove each fires and blocks the merge. *(scanners)*
+  (container) → SARIF → conftest, all in one `security-gates` job (scanners emit SARIF, conftest
+  enforces). Plant `demo/failing-gates` (one finding per gate); prove each fires and blocks the
+  merge. **IaC (Checkov) moved to M4** — it needs `infra/`, which M4 introduces. *(scanners)*
 - [ ] **M4 — SBOM + IaC** — Syft → CycloneDX artifact per build; GCP Terraform clean baseline in
-  `infra/` + Checkov; failing-branch IaC misconfig (public GCS bucket, `0.0.0.0/0` firewall).
-  *(syft/checkov)*
+  `infra/` + Checkov gate (added to the `security-gates` job, feeding the same conftest gate);
+  failing-branch IaC misconfig (public GCS bucket, `0.0.0.0/0` firewall). *(syft/checkov)*
 - [ ] **M5 — Policy docs + evidence** — `docs/POLICY.md` (threshold + exception request/approval
   workflow); screenshots: green `main`, blocked `demo/failing-gates` PR, exception-suppresses-one
   demo. README per-gate "why it matters" + shift-left rationale.

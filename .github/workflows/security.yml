@@ -120,96 +120,85 @@ jobs:
           fi
           echo "OK: fixtures/failing/ correctly denied (exit code 1)"
 
-  # ── TODO M3: SAST — Semgrep ───────────────────────────────────────────────
-  # BEFORE UNCOMMENTING: resolve current SHA for returntocorp/semgrep-action and pin it.
-  #
-  # semgrep:
-  #   name: SAST (Semgrep)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - uses: returntocorp/semgrep-action@v1  # TODO M3: replace @v1 with full commit SHA
-  #       with:
-  #         config: "p/python"
-  #         output: semgrep.sarif
-  #         output-format: sarif
-  #
-  # ── TODO M3: SCA — Trivy filesystem ──────────────────────────────────────
-  # BEFORE UNCOMMENTING: resolve current SHA for aquasecurity/trivy-action and pin it.
-  #
-  # trivy-fs:
-  #   name: SCA (Trivy fs)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - uses: aquasecurity/trivy-action@master  # TODO M3: replace @master with full commit SHA
-  #       with:
-  #         scan-type: "fs"
-  #         scan-ref: "app/requirements.txt"
-  #         format: "sarif"
-  #         output: "trivy-fs.sarif"
-  #
-  # ── TODO M3: Secrets — Gitleaks ──────────────────────────────────────────
-  # BEFORE UNCOMMENTING: resolve current SHA for gitleaks/gitleaks-action and pin it.
-  #
-  # gitleaks:
-  #   name: Secrets (Gitleaks)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #       with:
-  #         fetch-depth: 0
-  #     - uses: gitleaks/gitleaks-action@v2  # TODO M3: replace @v2 with full commit SHA
-  #       with:
-  #         format: sarif
-  #         output: gitleaks.sarif
-  #
-  # ── TODO M3: Container — Trivy image ─────────────────────────────────────
-  # BEFORE UNCOMMENTING: resolve current SHA for aquasecurity/trivy-action and pin it.
-  #
-  # trivy-image:
-  #   name: Container (Trivy image)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - name: Build image
-  #       run: docker build -t devsecops-app:ci app/
-  #     - uses: aquasecurity/trivy-action@master  # TODO M3: replace @master with full commit SHA
-  #       with:
-  #         image-ref: "devsecops-app:ci"
-  #         format: "sarif"
-  #         output: "trivy-image.sarif"
-  #
-  # ── TODO M3/M4: IaC — Checkov ────────────────────────────────────────────
-  # BEFORE UNCOMMENTING: resolve current SHA for bridgecrewio/checkov-action and pin it.
-  #
-  # checkov:
-  #   name: IaC (Checkov)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - uses: bridgecrewio/checkov-action@master  # TODO M3/M4: replace @master with full commit SHA
-  #       with:
-  #         directory: infra/
-  #         output_format: sarif
-  #         output_file_path: checkov.sarif
-  #
-  # ── TODO M3: conftest policy gate over live SARIF ──────────────────────────
-  # BEFORE UNCOMMENTING: pin all uses: to full commit SHAs.
-  #
-  # gate:
-  #   name: OPA/conftest policy gate
-  #   runs-on: ubuntu-latest
-  #   needs: [semgrep, trivy-fs, gitleaks, trivy-image, checkov]
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - name: Download all SARIF artifacts
-  #       uses: actions/download-artifact@v4  # TODO M3: replace @v4 with full commit SHA
-  #     - name: Install conftest
-  #       run: |
-  #         curl -L ... | tar -xz -C /usr/local/bin/ conftest
-  #     - name: Run conftest gate
-  #       run: conftest run --policy policy/ *.sarif
+  # ── Live security gates: real scanners → SARIF → conftest policy gate ──────
+  # Four real scanners each run in their pinned official image, emit SARIF, and
+  # never fail the build themselves (Trivy exit-code 0, Gitleaks --exit-code 0,
+  # Semgrep non-error by default). The single conftest step is the sole
+  # enforcement point: it denies on any HIGH+ finding lacking a valid, unexpired
+  # exception (§7), so a real finding blocks the merge. Green on main; the
+  # demo/failing-gates branch plants one finding per gate to prove each fires.
+  # Trivy uses --ignore-unfixed so only actionable (fix-available) HIGH+ gates —
+  # unfixable base-image OS CVEs do not perma-red main. IaC (Checkov) is wired in
+  # M4 alongside infra/. See docs/DECISIONS.md ADR-011.
+  security-gates:
+    name: Security gates (live scanners → conftest)
+    runs-on: ubuntu-latest
+    needs: opa-policy-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0  # Gitleaks scans the full git history
+
+      - name: Prepare SARIF output dir
+        run: mkdir -p sarif
+
+      - name: SAST — Semgrep (p/python)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.168.0 \
+            semgrep --config p/python --sarif --output sarif/semgrep.sarif app/
+
+      - name: SCA — Trivy filesystem (dependencies)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:0.72.0 fs \
+            --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 \
+            --format sarif --output /src/sarif/trivy-fs.sarif /src/app/requirements.txt
+
+      - name: Secrets — Gitleaks (full repo + history)
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 detect \
+            --source=/repo --report-format sarif --report-path /repo/sarif/gitleaks.sarif \
+            --exit-code 0 --no-banner
+
+      - name: Build image
+        run: docker build -t devsecops-app:ci app/
+
+      - name: Container — Trivy image
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/src" \
+            aquasec/trivy:0.72.0 image \
+            --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 \
+            --format sarif --output /src/sarif/trivy-image.sarif devsecops-app:ci
+
+      - name: Upload SARIF (evidence)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: sarif
+          path: sarif/
+
+      - name: Install conftest (pinned v0.68.2, checksum-verified)
+        run: |
+          set -euo pipefail
+          CONFTEST_VERSION=0.68.2
+          ASSET="conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          DL="curl --fail --retry 3 --retry-delay 2 --retry-all-errors -sSL"
+          $DL -o "${ASSET}" "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/${ASSET}"
+          $DL -o checksums.txt "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/checksums.txt"
+          grep " ${ASSET}\$" checksums.txt | sha256sum -c -
+          tar -xzf "${ASSET}" conftest
+          chmod +x conftest
+          sudo mv conftest /usr/local/bin/conftest
+          rm "${ASSET}" checksums.txt
+          conftest --version
+
+      - name: Policy gate — conftest over live SARIF (deny ⇒ merge blocked)
+        run: conftest test --policy policy --data data --parser json sarif/*.sarif
+
+  # ── TODO M4: IaC — Checkov (add with infra/) ─────────────────────────────
+  # M4 adds a clean GCP Terraform baseline in infra/ + a Checkov step in the
+  # security-gates job above (scan infra/ → checkov.sarif → same conftest gate).
+  # The demo/failing-gates branch plants a public GCS bucket + 0.0.0.0/0 firewall.
   #
   # ── TODO M4: SBOM — Syft ─────────────────────────────────────────────────
   # BEFORE UNCOMMENTING: resolve current SHAs for anchore/sbom-action and upload-artifact, pin them.
