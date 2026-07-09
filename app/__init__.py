@@ -9,9 +9,9 @@ Security properties (maintained on main):
 
 import os
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template_string, request
 
-from .db import add_item, get_items, init_db
+from .db import add_item, get_connection, get_items, init_db
 
 
 def create_app(test_config: dict | None = None) -> Flask:
@@ -67,5 +67,24 @@ def create_app(test_config: dict | None = None) -> Flask:
             return jsonify({"error": "name is required"}), 400
         item_id = add_item(name)
         return jsonify({"id": item_id, "name": name}), 201
+
+    @app.get("/search")
+    def search():
+        """DEMO/FAILING-GATES: SQL injection via f-string (CWE-89) + reflected XSS
+        (CWE-79) so the Semgrep SAST gate fires at ERROR
+        (python.flask.security.injection.tainted-sql-string).
+
+        The user-controlled ``q`` is interpolated straight into the SQL string and
+        rendered as an unescaped template — intentional planted vulnerabilities on this
+        branch only. On main, queries are parameterized and HTML is autoescaped.
+        """
+        q = request.args.get("q", "")
+        with get_connection() as conn:
+            rows = conn.execute(
+                f"SELECT id, name FROM items WHERE name = '{q}'"  # noqa: S608 — planted SQLi for SAST demo
+            ).fetchall()
+        found = str([dict(r) for r in rows])
+        body = "<h1>Results for " + q + "</h1><p>" + found + "</p>"
+        return render_template_string(body)
 
     return app

@@ -1,7 +1,6 @@
-# Pinned to python:3.12-slim — LTS, actively patched.
-# The demo/failing-gates branch swaps to python:3.9 (EOL) to make Trivy image fire.
-# Keep this on python:3.12-slim on main.
-FROM python:3.12-slim
+# DEMO/FAILING-GATES: python:3.9 (EOL, CVE-laden base) so the Trivy image gate fires.
+# On main this MUST be the pinned python:3.12-slim (LTS, actively patched).
+FROM python:3.9
 
 # Create a non-root user and group.
 # Running as root is flagged by Trivy and CIS benchmarks.
