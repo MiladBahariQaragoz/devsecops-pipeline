@@ -15,7 +15,7 @@ CycloneDX SBOM artifact.
 | M1 — Secure Flask app + Dockerfile + CI lint/test | ✅ Done |
 | M2 — OPA/Rego policy spine + conftest fixtures | ✅ Done |
 | M3 — Gates wired (4 scanners → SARIF → conftest) | ✅ Done |
-| M4 — SBOM (Syft CycloneDX) | ⬜ Planned |
+| M4 — SBOM (Syft CycloneDX) | ✅ Done |
 | M5 — Policy docs + evidence | ⬜ Planned |
 
 > **Scope:** deliberately right-sized for a hobby/portfolio project. The IaC gate (Checkov +

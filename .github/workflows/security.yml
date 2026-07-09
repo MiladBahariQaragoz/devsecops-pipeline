@@ -1,6 +1,8 @@
 # DevSecOps security pipeline
 # M1: lint + test job (green on main)
-# M2–M4: security gate stages are stubbed below with # TODO markers — add them incrementally.
+# M2: OPA policy unit tests + conftest gate over committed SARIF fixtures (offline)
+# M3: security-gates — 4 live scanners → SARIF → conftest (sole enforcement point)
+# M4: SBOM — Syft CycloneDX of the built image, uploaded as a build artifact (evidence)
 
 name: security
 
@@ -138,8 +140,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
-      - name: Prepare SARIF output dir
-        run: mkdir -p sarif
+      - name: Prepare output dirs
+        run: mkdir -p sarif sbom
 
       - name: SAST — Semgrep (p/python)
         run: |
@@ -174,12 +176,29 @@ jobs:
             --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 \
             --format sarif --output /src/sarif/trivy-image.sarif devsecops-app:ci
 
+      - name: SBOM — Syft (CycloneDX of the built image)
+        run: |
+          # Per-build SBOM of the same devsecops-app:ci image the container gate
+          # scanned. This is evidence, not a gate — Syft only fails on a real
+          # tooling error, never on SBOM contents. Pinned official image, mirroring
+          # the scanner discipline in ADR-011. See docs/DECISIONS.md ADR-014.
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/src" \
+            anchore/syft:v1.46.0 devsecops-app:ci \
+            -o cyclonedx-json=/src/sbom/sbom.cyclonedx.json
+
       - name: Upload SARIF (evidence)
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: sarif
           path: sarif/
+
+      - name: Upload SBOM (evidence)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: sbom
+          path: sbom/
 
       - name: Install conftest (pinned v0.68.2, checksum-verified)
         run: |
@@ -198,21 +217,3 @@ jobs:
 
       - name: Policy gate — conftest over live SARIF (deny ⇒ merge blocked)
         run: conftest test --policy policy --data data --parser json sarif/*.sarif
-
-  # ── TODO M4: SBOM — Syft ─────────────────────────────────────────────────
-  # BEFORE UNCOMMENTING: resolve current SHAs for anchore/sbom-action and upload-artifact, pin them.
-  #
-  # sbom:
-  #   name: SBOM (Syft)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2 — pin SHA before uncommenting
-  #     - uses: anchore/sbom-action@v0  # TODO M4: replace @v0 with full commit SHA
-  #       with:
-  #         image: devsecops-app:ci
-  #         format: cyclonedx-json
-  #         output-file: sbom.cyclonedx.json
-  #     - uses: actions/upload-artifact@v4  # TODO M4: replace @v4 with full commit SHA
-  #       with:
-  #         name: sbom
-  #         path: sbom.cyclonedx.json

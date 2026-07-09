@@ -232,3 +232,27 @@ fixtures include it), so re-adding an IaC gate later is a localized change if ev
 wanted. `README.md`, `CLAUDE.md`, `plan.md`, and `security.yml` were updated to reflect
 four gates; the design spec §13 (five gates) is left as the original design of record,
 with this ADR as the governing amendment.
+
+## ADR-014 — SBOM: Syft CycloneDX of the built image, in the security-gates job
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Context:** M4 adds a per-build Software Bill of Materials. Three choices: (a) the tool
+(anchore/sbom-action vs the Syft container image), (b) the target (source tree vs the
+built image), and (c) where it runs (a separate `sbom` job vs the existing
+`security-gates` job). The marketplace `anchore/sbom-action` would need its own
+commit-SHA pin and pulls transitive action code; a separate job would rebuild the image
+just to scan it.
+**Decision:** Run **Syft in its pinned official image** (`anchore/syft:v1.46.0`) in a
+plain `run:` step, mirroring the scanner discipline in ADR-011. Scan the **built
+`devsecops-app:ci` image** (not the source tree), so the SBOM reflects exactly what
+ships — OS packages plus Python deps. Emit **CycloneDX JSON** and upload it as the
+`sbom` build artifact (`if: always()`). Add the step to the **existing
+`security-gates` job**, after the Trivy image gate, reusing the image that job already
+builds — no duplicate build. The SBOM is **evidence, not a gate**: Syft fails only on a
+real tooling error, never on SBOM contents, so it never blocks a merge.
+**Consequences:** One pinned image, no marketplace-action SHA to track; the SBOM covers
+the full runtime image (≈2.7k components locally). It is downloadable per run for
+audit/diff and is the natural feed for a future Grype-the-SBOM gate if that stretch item
+is ever revived. No new enforcement path, so `main` stays green regardless of SBOM
+contents.

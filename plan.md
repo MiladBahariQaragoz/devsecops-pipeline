@@ -25,7 +25,7 @@ container) + a per-build **SBOM**, unified by the OPA/Rego policy gate.
   (container) → SARIF → conftest, all in one `security-gates` job (scanners emit SARIF, conftest
   enforces). Plant `demo/failing-gates` (one finding per gate); prove each fires and blocks the
   merge. *(scanners)*
-- [ ] **M4 — SBOM** — Syft → CycloneDX artifact per build, uploaded as a build artifact. No new
+- [x] **M4 — SBOM** — Syft → CycloneDX artifact per build, uploaded as a build artifact. No new
   gate — the SBOM is evidence, not an enforcement point. *(syft)*
 - [ ] **M5 — Policy docs + evidence** — `docs/POLICY.md` (threshold + exception request/approval
   workflow); screenshots: green `main`, blocked `demo/failing-gates` PR, exception-suppresses-one
