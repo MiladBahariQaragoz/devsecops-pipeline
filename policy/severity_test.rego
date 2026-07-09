@@ -81,6 +81,50 @@ test_missing_level_and_severity_defaults_to_medium_allowed if {
 	count(deny) == 0 with input as input_doc with data.exceptions as []
 }
 
+# SARIF result.level omitted → inherit the rule's defaultConfiguration.level.
+# Semgrep emits ERROR findings this way (level on the rule, not the result).
+test_rule_default_config_level_error_denies if {
+	input_doc := {"runs": [{
+		"tool": {"driver": {
+			"name": "Semgrep",
+			"rules": [{"id": "r1", "defaultConfiguration": {"level": "error"}}],
+		}},
+		"results": [{"ruleId": "r1", "locations": []}],
+	}]}
+	count(deny) > 0 with input as input_doc with data.exceptions as []
+}
+
+# A WARNING-level rule (defaultConfiguration) is MEDIUM → below threshold → allowed.
+test_rule_default_config_level_warning_allowed if {
+	input_doc := {"runs": [{
+		"tool": {"driver": {
+			"name": "Semgrep",
+			"rules": [{"id": "r1", "defaultConfiguration": {"level": "warning"}}],
+		}},
+		"results": [{"ruleId": "r1", "locations": []}],
+	}]}
+	count(deny) == 0 with input as input_doc with data.exceptions as []
+}
+
+# Gitleaks results carry neither level nor security-severity, but a committed secret
+# must always gate — floored to HIGH by tool name.
+test_gitleaks_finding_with_no_severity_denies if {
+	input_doc := {"runs": [{
+		"tool": {"driver": {"name": "gitleaks", "rules": []}},
+		"results": [{"ruleId": "aws-access-token", "locations": []}],
+	}]}
+	count(deny) > 0 with input as input_doc with data.exceptions as []
+}
+
+# The Gitleaks floor is tool-scoped: another tool with no severity stays MEDIUM.
+test_non_gitleaks_no_severity_not_floored if {
+	input_doc := {"runs": [{
+		"tool": {"driver": {"name": "SomeOtherTool", "rules": []}},
+		"results": [{"ruleId": "r1", "locations": []}],
+	}]}
+	count(deny) == 0 with input as input_doc with data.exceptions as []
+}
+
 test_deny_end_to_end_valid_exception_suppresses if {
 	input_doc := {"runs": [{
 		"tool": {"driver": {"name": "TestTool", "rules": []}},

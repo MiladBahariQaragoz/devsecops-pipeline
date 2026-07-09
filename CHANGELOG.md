@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   denying HIGH+ findings without a valid exception. Scanners run non-failing; Trivy uses
   `--ignore-unfixed` so unfixable base-image OS CVEs don't red `main`. SARIF uploaded as a
   build artifact. IaC/Checkov deferred to M4 (needs `infra/`). See ADR-011.
+- Policy severity resolution refined for real scanner output (ADR-012): honor a rule's
+  `defaultConfiguration.level` when a result omits `level` (Semgrep), and floor Gitleaks
+  findings to HIGH (secrets carry no severity in SARIF). +4 `opa test` cases (now 25).
 
 ### Fixed
 - CI tool installs (`opa`, `conftest`) now download with `curl --fail --retry`, so a
