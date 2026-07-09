@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- CI tool installs (`opa`, `conftest`) now download with `curl --fail --retry`, so a
+  transient release-CDN error aborts loudly at the download instead of poisoning the
+  checksum file and failing with a misleading "no properly formatted checksum lines"
+  error. See ADR-010.
+
+## [0.2.0] — 2026-07-09
+
 ### Added
 - M2 policy spine: OPA/Rego policy gate validated offline before any live scanner.
   - `policy/severity.rego` — severity normalization (SARIF level + `security-severity`)

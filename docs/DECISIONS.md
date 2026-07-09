@@ -134,3 +134,23 @@ directly in v1 syntax (`deny contains msg if { ... }`, `some x in y`) with no
 the OPA/conftest portion of issue #6 (the Gitleaks allow-list portion, L.2,
 stays open for M3). Any future Rego file in this repo must stay v1-syntax
 consistent.
+
+## ADR-010 — Fail-fast, retrying downloads for pinned CI tool installs
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Context:** The `opa`/`conftest` install steps (ADR-009) fetched the release
+assets and their checksum sidecars with `curl -sSL`, which follows redirects
+but does **not** fail on a 4xx/5xx response. During a transient GitHub release-
+CDN disruption the checksum sidecar download returned an HTML error page; curl
+saved it happily, and `sha256sum -c` then failed with the misleading `no
+properly formatted checksum lines found` — a real download outage surfacing as
+an opaque checksum error, and re-runs kept failing while the CDN was flaky.
+**Decision:** Wrap all four tool/checksum downloads in
+`curl --fail --retry 3 --retry-delay 2 --retry-all-errors -sSL`. `--fail` makes
+a bad HTTP status abort the step with a clear cause instead of poisoning the
+checksum file; `--retry`/`--retry-all-errors` rides out transient CDN blips
+automatically.
+**Consequences:** Transient CDN errors self-heal via retry; a genuine outage
+fails loudly at the download, not deceptively at checksum verification. The
+pinning + `sha256sum -c` tamper-evidence from ADR-009 is unchanged.
