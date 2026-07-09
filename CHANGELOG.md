@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   findings to HIGH (secrets carry no severity in SARIF). +4 `opa test` cases (now 25).
 
 ### Fixed
+- Test fixture flake: the shared-cache in-memory SQLite DB was destroyed when its last
+  connection closed, causing an intermittent `no such table: items`. The `client`
+  fixture now holds a keepalive connection open for the test's lifetime.
 - CI tool installs (`opa`, `conftest`) now download with `curl --fail --retry`, so a
   transient release-CDN error aborts loudly at the download instead of poisoning the
   checksum file and failing with a misleading "no properly formatted checksum lines"
