@@ -4,8 +4,9 @@
 # To update: pip install flask==<new-version> then pip freeze > app/requirements.txt
 # (inside the .venv, not globally).
 #
-# NOTE: The demo/failing-gates branch pins flask==0.12.2 (known CVEs) to make Trivy fire.
-# Do NOT pin a vulnerable version here.
+# NOTE: The demo/failing-gates branch adds a known-vulnerable dependency
+# (requests==2.19.1, CVE-2018-18074) to make the Trivy fs gate fire. Keep this list
+# free of HIGH+ CVEs on main — never add a vulnerable pin here.
 flask==3.1.3
 werkzeug==3.1.8
 click==8.4.2
