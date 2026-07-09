@@ -1,15 +1,22 @@
-# Runtime dependencies — pinned to exact currently-patched versions.
-# Trivy fs scans this file in M3; keep clean of HIGH+ CVEs on main.
+# DEMO/FAILING-GATES: the runtime stack is kept current (so the app still imports and
+# the unit tests pass), but a known-vulnerable, unused dependency — requests 2.19.1
+# (CVE-2018-18074, HIGH) — is added so the Trivy fs (SCA) gate fires. This is the
+# planted SCA finding on this branch only; NEVER add a vulnerable pin on main.
 #
-# To update: pip install flask==<new-version> then pip freeze > app/requirements.txt
-# (inside the .venv, not globally).
-#
-# NOTE: The demo/failing-gates branch pins flask==0.12.2 (known CVEs) to make Trivy fire.
-# Do NOT pin a vulnerable version here.
+# (An earlier idea pinned flask==0.12.2 directly, but that framework version predates
+#  the app's Flask 2.0+ APIs — e.g. @app.get — and imports `jinja2.Markup`, removed in
+#  modern Jinja2, so the app could not even import. Demonstrating SCA via an added
+#  vulnerable dependency keeps the app runnable so the *security* gate is the sole
+#  blocker.)
 flask==3.1.3
 werkzeug==3.1.8
-click==8.4.2
+# click 8.1.8 (not main's 8.4.2) — the container gate's Dockerfile uses the EOL
+# python:3.9 base, and click 8.4.2 requires Python >=3.10, so the image would fail to
+# build. 8.1.8 installs on 3.9, letting the image build so Trivy image can scan it.
+# (Both install fine on the lint/test job's Python 3.12.)
+click==8.1.8
 itsdangerous==2.2.0
 jinja2==3.1.6
 markupsafe==3.0.3
 blinker==1.9.0
+requests==2.19.1

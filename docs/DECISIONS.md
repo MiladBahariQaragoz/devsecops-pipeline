@@ -154,3 +154,58 @@ automatically.
 **Consequences:** Transient CDN errors self-heal via retry; a genuine outage
 fails loudly at the download, not deceptively at checksum verification. The
 pinning + `sha256sum -c` tamper-evidence from ADR-009 is unchanged.
+
+## ADR-011 — Live gates: pinned scanner images emit SARIF; conftest is the sole enforcer
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Context:** M3 wires the real scanners behind the M2 policy gate. Two choices had
+to be made: (a) how to run each scanner reproducibly, and (b) where enforcement
+happens. Marketplace actions (`aquasecurity/trivy-action`, `gitleaks-action`,
+`semgrep-action`) each need their own commit-SHA pin and pull transitive action
+code; several also fail the job on findings, which would split enforcement across
+five places.
+**Decision:** Run each scanner in its **pinned official container image** inside
+plain `run:` steps — `semgrep/semgrep:1.168.0`, `aquasec/trivy:0.72.0`,
+`zricethezav/gitleaks:v8.30.1` — mirroring the pinned-binary discipline already
+used for opa/conftest (ADR-009). Every scanner is configured **non-failing**
+(Trivy `--exit-code 0`, Gitleaks `--exit-code 0`, Semgrep non-error by default)
+and writes SARIF into `sarif/`. A single final `conftest` step over
+`sarif/*.sarif` is the **sole enforcement point** — it denies HIGH+ findings
+without a valid, unexpired exception, so the merge-blocking decision lives in one
+tested place (the M2 policy), not scattered across scanner exit codes.
+Trivy runs with **`--ignore-unfixed`** so only actionable (fix-available) HIGH+
+CVEs gate; unfixable base-image OS CVEs cannot permanently red `main`.
+**Consequences:** Fewer third-party action pins; one uniform SARIF model; the gate
+verdict is reproducible offline (M2 fixtures) and live (this job). IaC/Checkov is
+deferred to M4 where `infra/` is introduced, so M3 gates only what already exists
+(app source, dependencies, secrets, container image).
+
+## ADR-012 — Severity resolution refined for real Semgrep and Gitleaks SARIF
+
+**Date:** 2026-07-09
+**Status:** Accepted
+**Context:** The M2 policy was authored and unit-tested against hand-written SARIF
+fixtures. When the M3 live gates were first run against the `demo/failing-gates`
+branch, only the Trivy gates denied — the Semgrep and Gitleaks findings passed
+through, despite being real HIGH-value issues. Inspecting the actual tool output
+revealed two SARIF conventions the fixtures had not captured:
+  1. **Semgrep** omits `level` on each result and instead declares it once on the
+     rule (`rules[].defaultConfiguration.level`). The policy only read
+     `result.level`, so ERROR-level Semgrep findings fell through to the MEDIUM
+     default and did not gate.
+  2. **Gitleaks** emits neither `level` nor `security-severity` on its results —
+     it carries no severity signal at all. The MEDIUM default meant a committed
+     secret did not gate.
+**Decision:** Extend `result_severity` with two tiers (see POLICY.md for the full
+order): after `result.level`, fall back to the matching rule's
+`defaultConfiguration.level` (SARIF-compliant inheritance); and floor any finding
+from a tool named `gitleaks` to HIGH, since a detected secret is categorically
+high-severity. Added four `opa test` cases (default-config error denies / warning
+allowed; gitleaks-no-severity denies; non-gitleaks-no-severity stays MEDIUM).
+**Consequences:** All five conventions (result score, rule score, result level,
+rule default-config level, gitleaks floor) are covered, so real Semgrep/Gitleaks
+output gates correctly. `main` stays green (its clean scans produce zero results);
+the offline fixtures still pass/deny unchanged. This is the concrete payoff of the
+build order — validating the policy offline first, then discovering the real-SARIF
+gaps the moment live scanners ran.

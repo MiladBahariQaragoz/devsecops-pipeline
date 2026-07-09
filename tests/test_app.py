@@ -3,6 +3,7 @@
 Uses Flask's built-in test client — no Docker required.
 """
 
+import sqlite3
 import uuid
 
 import pytest
@@ -16,9 +17,18 @@ def client():
     # file:<name>?mode=memory&cache=shared keeps all connections within one test
     # on the same in-memory DB while preventing any other test from seeing that data.
     db_uri = f"file:test_{uuid.uuid4().hex}?mode=memory&cache=shared"
+    # A shared-cache in-memory SQLite DB is destroyed the moment its last connection
+    # closes. Each request opens and closes its own connection, so without a keepalive
+    # the `items` table created by init_db() can vanish before the next request — a
+    # timing-dependent "no such table: items" flake. Hold one connection open for the
+    # whole test to keep the DB (and its table) alive.
+    keepalive = sqlite3.connect(db_uri, uri=True)
     app = create_app(test_config={"DATABASE": db_uri, "TESTING": True})
-    with app.test_client() as c:
-        yield c
+    try:
+        with app.test_client() as c:
+            yield c
+    finally:
+        keepalive.close()
 
 
 def test_health_returns_200(client):
