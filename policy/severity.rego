@@ -10,8 +10,13 @@ severity_rank := {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 # priority order:
 #   1. result.properties["security-severity"]   (numeric CVSS-style score)
 #   2. the matching rule's properties["security-severity"] (rule-level score)
-#   3. SARIF `level` (error/warning/note/none)
-#   4. MEDIUM, if nothing above is present
+#   3. SARIF result `level` (error/warning/note/none)
+#   4. the matching rule's defaultConfiguration.level (SARIF: a result inherits its
+#      rule's configured level when result.level is omitted — Semgrep and others emit
+#      the level once on the rule, not on every result)
+#   5. HIGH, for Gitleaks findings (secrets carry no severity in SARIF but a committed
+#      secret is categorically high-severity)
+#   6. MEDIUM, if nothing above is present
 result_severity(run, result) := sev if {
 	sev := security_severity_field(result.properties)
 } else := sev if {
@@ -20,6 +25,12 @@ result_severity(run, result) := sev if {
 	sev := security_severity_field(rule.properties)
 } else := sev if {
 	sev := level_to_severity(result.level)
+} else := sev if {
+	some rule in run.tool.driver.rules
+	rule.id == result.ruleId
+	sev := level_to_severity(rule.defaultConfiguration.level)
+} else := "HIGH" if {
+	lower(object.get(run, ["tool", "driver", "name"], "")) == "gitleaks"
 } else := "MEDIUM"
 
 # security_severity_field resolves the normalized severity from a

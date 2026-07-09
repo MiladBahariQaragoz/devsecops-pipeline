@@ -31,10 +31,20 @@ stopping at the first source that is present:
 2. **The matching rule's `properties["security-severity"]`** — the same kind
    of score, declared once on the rule (`tool.driver.rules[]`) instead of
    repeated on every result. This is the convention Trivy uses.
-3. **SARIF `level`** — `error` → HIGH, `warning` → MEDIUM, `note`/`none` → LOW.
-   Gitleaks and many Checkov checks set only `level`, with no CVSS score.
-4. **MEDIUM**, if none of the above is present — fail toward visibility, not
+3. **SARIF result `level`** — `error` → HIGH, `warning` → MEDIUM, `note`/`none` → LOW.
+4. **The matching rule's `defaultConfiguration.level`** — per the SARIF spec, a
+   result with no `level` inherits its rule's configured level. Semgrep relies on
+   this: it declares the level once on the rule and omits it on each result, so an
+   ERROR-level Semgrep finding is only visible here (without this tier it would fall
+   through to the MEDIUM default and silently not gate).
+5. **HIGH for Gitleaks findings** — Gitleaks results carry neither `level` nor a
+   CVSS score, but a committed secret is categorically high-severity, so any Gitleaks
+   finding is floored to HIGH (matched by `tool.driver.name`).
+6. **MEDIUM**, if none of the above is present — fail toward visibility, not
    toward a silent pass.
+
+See ADR-011 (live gates) and ADR-012 (this resolution refinement, learned by running
+the real scanners) in `docs/DECISIONS.md`.
 
 Numeric scores are bucketed using the CVSS v3.1 Qualitative Severity Rating
 Scale:
