@@ -16,7 +16,7 @@ point early. **Lab is Linux; Terraform is scan-only — no `terraform apply`, no
 - [x] **M2 — Policy spine** — `policy/*.rego` (severity threshold + exception/expiry logic) +
   `data/exceptions.yaml` + `opa test policy/`; `conftest` over committed `fixtures/clean/` (passes)
   and `fixtures/failing/` (denies). Gate works **before** any live scanner. *(opa/conftest)*
-- [ ] **M3 — Gates wired** — Semgrep (SAST), Trivy fs (SCA), Gitleaks (secrets), Trivy image
+- [x] **M3 — Gates wired** — Semgrep (SAST), Trivy fs (SCA), Gitleaks (secrets), Trivy image
   (container) → SARIF → conftest, all in one `security-gates` job (scanners emit SARIF, conftest
   enforces). Plant `demo/failing-gates` (one finding per gate); prove each fires and blocks the
   merge. **IaC (Checkov) moved to M4** — it needs `infra/`, which M4 introduces. *(scanners)*
