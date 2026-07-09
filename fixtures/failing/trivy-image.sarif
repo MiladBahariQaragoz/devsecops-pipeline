@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Trivy",
+          "informationUri": "https://trivy.dev",
+          "rules": [
+            {"id": "CVE-2022-40897", "properties": {"security-severity": "7.5"}}
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CVE-2022-40897",
+          "message": {
+            "text": "python:3.9 (EOL) base image: vulnerable setuptools version, regex denial of service."
+          },
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "app/Dockerfile"}}}
+          ]
+        }
+      ]
+    }
+  ]
+}

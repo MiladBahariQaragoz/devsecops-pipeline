@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Semgrep",
+          "informationUri": "https://semgrep.dev",
+          "rules": []
+        }
+      },
+      "results": [
+        {
+          "ruleId": "python.flask.security.injection.sql-injection",
+          "level": "error",
+          "message": {
+            "text": "SQL injection via f-string query construction — use a parameterized query instead."
+          },
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "app/db.py"}}}
+          ]
+        },
+        {
+          "ruleId": "python.flask.security.xss.audit",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS: unescaped user input rendered into an HTML response."
+          },
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "app/__init__.py"}}}
+          ]
+        }
+      ]
+    }
+  ]
+}

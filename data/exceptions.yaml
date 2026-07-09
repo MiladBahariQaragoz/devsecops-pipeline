@@ -1,0 +1,26 @@
+# Exception allowlist consumed by the OPA/Rego policy gate (policy/exceptions.rego)
+# via `conftest test --data data ...`. Each entry suppresses ONE matching SARIF
+# finding — it does not disable the whole gate. See docs/POLICY.md for the full
+# request/approval/expiry workflow.
+#
+# Schema:
+#   - rule:    (required) the SARIF `ruleId` of the finding to suppress.
+#   - reason:  (required) why this finding is a false positive / accepted risk.
+#   - owner:   (required) who requested/owns this exception.
+#   - expires: (required) "YYYY-MM-DD" — suppression stops after this date.
+#              Fail-closed: a missing or malformed `expires` denies the finding
+#              as if no exception existed at all.
+#   - path:    (optional) scope the exception to results whose location URI
+#              ends with this path. Omit to except the rule id repo-wide.
+#
+# Worked example (matches fixtures/failing/semgrep.sarif's planted XSS finding —
+# to activate, e.g. for the M5 exception demo: delete the `exceptions: []` line
+# below and replace it with `exceptions:` followed by this one entry, indented
+# as shown):
+#
+#   - rule: "python.flask.security.xss.audit"
+#     reason: "False positive — value is constant, not user input"
+#     owner: "milad"
+#     expires: "2026-09-30"
+
+exceptions: []

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "gitleaks",
+          "informationUri": "https://github.com/gitleaks/gitleaks",
+          "rules": []
+        }
+      },
+      "results": [
+        {
+          "ruleId": "aws-access-token",
+          "level": "error",
+          "message": {
+            "text": "Detected a generic AWS Access Key ID, risking unauthorized access to cloud resources."
+          },
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "app/config_fake.py"}}}
+          ]
+        }
+      ]
+    }
+  ]
+}
